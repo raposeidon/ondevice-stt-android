@@ -10,17 +10,18 @@ import java.net.URL
 
 /**
  * Whisper ggml 모델을 내부 저장소로 내려받아 관리한다.
- * 기본: multilingual base 양자화(q5_1) 모델 — base 품질을 유지하면서 더 빠르고 작다.
+ * 기본: multilingual base 양자화(q8_0) 모델 — f16에 근접한 품질이면서,
+ * arm64 int8 가속(dotprod/i8mm) 덕에 q5_1보다도 빠르다.
  */
 class ModelManager(private val context: Context) {
 
     companion object {
         private const val TAG = "ModelManager"
-        const val MODEL_FILE = "ggml-base-q5_1.bin"
+        const val MODEL_FILE = "ggml-base-q8_0.bin"
         private const val MODEL_URL =
-            "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base-q5_1.bin"
-        // 다운로드 무결성 최소 검증용 하한(q5_1 base 는 약 57MB).
-        private const val MIN_VALID_BYTES = 40_000_000L
+            "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base-q8_0.bin"
+        // 다운로드 무결성 최소 검증용 하한(q8_0 base 는 약 82MB).
+        private const val MIN_VALID_BYTES = 60_000_000L
     }
 
     /** 내부 저장소 경로(다운로드 대상). install -r 재설치 시 보존됨. */
