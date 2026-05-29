@@ -14,11 +14,15 @@ import kotlin.math.sqrt
  * 실시간(준실시간) 스트리밍 변환기.
  *
  * 동작: 마이크 프레임을 받아 에너지 기반 VAD 로 "발화 구간"을 검출한다.
- *  - 말이 멈추면(무음 [TRAILING_SILENCE_MS]) 그때까지의 구간을 하나의 발화로 확정해 변환한다.
- *  - 한 구간이 [MAX_SEGMENT_MS] 를 넘으면 강제로 잘라 변환한다.
+ * Whisper 인코더는 30초 고정 윈도우(짧으면 패딩)이므로, 너무 잘게 자르면
+ * 연산이 낭비되고 문맥이 끊겨 정확도가 떨어진다. 따라서 **30초 윈도우를 최대한 채우는**
+ * 쪽으로 구간을 모은다:
+ *  - [MAX_SEGMENT_MS](28초) 도달 → 강제 컷 (30초 윈도우 한계 내)
+ *  - [TARGET_SEGMENT_MS](10초) 이상 모인 뒤 짧은 무음([SHORT_SILENCE_MS]) → 문장 경계에서 컷
+ *  - 길이가 짧아도 긴 무음([LONG_SILENCE_MS]) → 발화가 끝난 것으로 보고 컷
  *
  * Whisper 는 batch 모델이라 진짜 토큰 스트리밍이 아니므로,
- * "문장/호흡 단위로 결과가 점점 추가되는" 방식으로 실시간감을 낸다.
+ * "구간이 모이면 결과가 점점 추가되는" 방식으로 실시간감을 낸다.
  *
  * 변환은 단일 소비자 코루틴(Channel)에서 순차 처리하여 결과 순서를 보장한다.
  *
@@ -33,11 +37,13 @@ class StreamingTranscriber(
 ) {
     companion object {
         private const val TAG = "StreamingTranscriber"
-        private const val SILENCE_RMS = 0.018f       // 무음 판정 RMS 임계값
-        private const val TRAILING_SILENCE_MS = 700  // 발화 종료로 보는 무음 길이
-        private const val MIN_SPEECH_MS = 500        // 너무 짧은 구간은 무시
-        private const val MAX_SEGMENT_MS = 12_000     // 무음이 없어도 강제 분할
-        private const val LEAD_SILENCE_KEEP_MS = 300  // 발화 전 무음은 이 정도만 남김
+        private const val SILENCE_RMS = 0.018f         // 무음 판정 RMS 임계값
+        private const val MIN_SPEECH_MS = 500          // 이보다 짧은 구간은 변환하지 않음
+        private const val TARGET_SEGMENT_MS = 10_000    // 짧은 무음 컷을 허용하기 위한 최소 누적 길이
+        private const val SHORT_SILENCE_MS = 700       // 충분히 긴 구간을 끊는 짧은 무음
+        private const val LONG_SILENCE_MS = 1_500       // 짧은 구간이라도 발화 종료로 보는 긴 무음
+        private const val MAX_SEGMENT_MS = 28_000       // 30초 윈도우 한계 내 강제 분할
+        private const val LEAD_SILENCE_KEEP_MS = 300   // 발화 전 무음은 이 정도만 남김
     }
 
     private val sampleRate = Recorder.SAMPLE_RATE
@@ -85,9 +91,11 @@ class StreamingTranscriber(
         }
 
         val durMs = len * 1000 / sampleRate
-        val byMaxLen = durMs >= MAX_SEGMENT_MS
-        val byPause = trailingSilenceMs >= TRAILING_SILENCE_MS && durMs >= MIN_SPEECH_MS
-        if (byMaxLen || byPause) {
+        // 30초 윈도우를 최대한 채우는 방향으로 컷 지점을 고른다.
+        val byMaxLen = durMs >= MAX_SEGMENT_MS                                      // 윈도우 한계
+        val byTarget = durMs >= TARGET_SEGMENT_MS && trailingSilenceMs >= SHORT_SILENCE_MS // 충분히 긴 뒤 짧은 무음
+        val byTurnEnd = durMs >= MIN_SPEECH_MS && trailingSilenceMs >= LONG_SILENCE_MS     // 긴 무음 = 발화 종료
+        if (byMaxLen || byTarget || byTurnEnd) {
             flushSegment()
         }
     }

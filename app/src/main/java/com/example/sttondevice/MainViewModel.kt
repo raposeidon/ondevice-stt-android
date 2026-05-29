@@ -171,7 +171,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             return
         }
         _uiState.update {
-            it.copy(phase = AppPhase.RECORDING, statusMessage = "실시간 인식 중... 말을 멈추면 문장이 추가됩니다.")
+            it.copy(phase = AppPhase.RECORDING, statusMessage = "실시간 인식 중... 구간이 모이면 결과가 추가됩니다.")
         }
     }
 
