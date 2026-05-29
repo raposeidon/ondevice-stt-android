@@ -19,6 +19,16 @@ Whisper 기반 **온디바이스(완전 오프라인) 한국어 음성 인식** 
 - 대상 ABI: **arm64-v8a** (실기기 권장)
 - minSdk 26 / targetSdk 35
 
+## Clone
+
+외부 소스(whisper.cpp, rnnoise)는 **git 서브모듈**입니다. 반드시 서브모듈까지 받으세요.
+
+```bash
+git clone --recursive https://github.com/raposeidon/ondevice-stt-android.git
+# 이미 clone 했다면
+git submodule update --init --recursive
+```
+
 ## 빌드 & 실행
 
 ```bash
@@ -27,7 +37,8 @@ Whisper 기반 **온디바이스(완전 오프라인) 한국어 음성 인식** 
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
-> `local.properties` 는 저장소에 포함되지 않습니다. Android Studio가 자동 생성하거나, 직접 `sdk.dir` 을 지정하세요.
+- `local.properties` 는 저장소에 포함되지 않습니다. Android Studio가 자동 생성하거나 `sdk.dir` 을 직접 지정하세요.
+- **RNNoise 경량 모델 가중치**(`rnnoise_data_little.c`)는 git 에 없으며, **빌드 시 CMake 가 자동 다운로드·검증·추출**합니다(최초 빌드 시 네트워크 필요).
 
 ## 모델 준비 (ggml-base.bin, 약 147MB)
 
@@ -57,9 +68,9 @@ app/src/main/
 ├── java/com/whispercpp/whisper/    # whisper.cpp Kotlin 래퍼
 └── cpp/                            # 네이티브
     ├── jni.c                       #   whisper + RNNoise JNI
-    ├── CMakeLists.txt
-    ├── whisper.cpp/                #   번들 소스
-    └── rnnoise/                    #   번들 소스 + 경량 모델
+    ├── CMakeLists.txt              #   모델 자동 다운로드 포함
+    ├── whisper.cpp/                #   서브모듈 (ggerganov/whisper.cpp)
+    └── rnnoise/                    #   서브모듈 (xiph/rnnoise, 모델은 빌드 시 다운로드)
 ```
 
 ## 처리 흐름
@@ -71,7 +82,7 @@ app/src/main/
 
 ## 라이선스
 
-본 저장소의 앱 코드 외에 다음 서드파티 소스가 포함됩니다 (앱 내 "오픈소스 라이선스" 화면에서도 확인 가능):
+본 저장소의 앱 코드 외에 다음 서드파티 소스를 서브모듈로 참조합니다 (앱 내 "오픈소스 라이선스" 화면에서도 확인 가능):
 
 - **whisper.cpp** — MIT License
 - **ggml** — MIT License
