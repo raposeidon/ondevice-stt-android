@@ -21,7 +21,9 @@ Java_com_whispercpp_whisper_WhisperLib_00024Companion_initContext(
     UNUSED(thiz);
     struct whisper_context *context = NULL;
     const char *model_path_chars = (*env)->GetStringUTFChars(env, model_path_str, NULL);
-    context = whisper_init_from_file_with_params(model_path_chars, whisper_context_default_params());
+    struct whisper_context_params cparams = whisper_context_default_params();
+    cparams.flash_attn = true; // 어텐션 가속
+    context = whisper_init_from_file_with_params(model_path_chars, cparams);
     (*env)->ReleaseStringUTFChars(env, model_path_str, model_path_chars);
     return (jlong) context;
 }
@@ -59,6 +61,7 @@ Java_com_whispercpp_whisper_WhisperLib_00024Companion_fullTranscribe(
     params.offset_ms = 0;
     params.no_context = true;
     params.single_segment = false;
+    // temperature_inc 는 기본값(0.2) 유지 = 디코딩 실패 시 재시도 폴백 ON (품질 안전장치)
 
     whisper_reset_timings(context);
 

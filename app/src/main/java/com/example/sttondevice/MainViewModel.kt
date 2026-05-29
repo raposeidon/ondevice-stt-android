@@ -138,10 +138,16 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     _uiState.update { it.copy(phase = AppPhase.ERROR, statusMessage = "모델이 로드되지 않았습니다.") }
                     return@launch
                 }
+                val startedNs = System.nanoTime()
                 val result = ctx.transcribeData(audio, language = LANGUAGE).trim()
+                val procSec = (System.nanoTime() - startedNs) / 1_000_000_000f
                 appendText(result)
+                val rtf = if (seconds > 0) procSec / seconds else 0f
                 _uiState.update {
-                    it.copy(phase = AppPhase.READY, statusMessage = "변환 완료 (${"%.1f".format(seconds)}초)")
+                    it.copy(
+                        phase = AppPhase.READY,
+                        statusMessage = "변환 완료 (음성 ${"%.1f".format(seconds)}s · 처리 ${"%.1f".format(procSec)}s · RTF ${"%.2f".format(rtf)})"
+                    )
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "변환 실패", e)
@@ -179,16 +185,21 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         if (_uiState.value.phase != AppPhase.RECORDING) return
         _uiState.update { it.copy(phase = AppPhase.TRANSCRIBING, statusMessage = "마지막 구간 변환 중...") }
         viewModelScope.launch {
+            val s = streamer
             try {
                 recorder.stop()           // 녹음 루프 종료
-                streamer?.finish()        // 남은 구간 변환 + 대기
+                s?.finish()               // 남은 구간 변환 + 대기
             } catch (e: Exception) {
                 Log.e(TAG, "스트리밍 종료 실패", e)
             } finally {
                 streamer = null
-                _uiState.update {
-                    it.copy(phase = AppPhase.READY, streamingBusy = false, statusMessage = "실시간 인식 완료")
+                val msg = if (s != null && s.audioSec > 0f) {
+                    val rtf = s.processedSec / s.audioSec
+                    "실시간 인식 완료 (음성 ${"%.1f".format(s.audioSec)}s · 처리 ${"%.1f".format(s.processedSec)}s · RTF ${"%.2f".format(rtf)})"
+                } else {
+                    "실시간 인식 완료"
                 }
+                _uiState.update { it.copy(phase = AppPhase.READY, streamingBusy = false, statusMessage = msg) }
             }
         }
     }

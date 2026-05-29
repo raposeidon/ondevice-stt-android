@@ -56,11 +56,20 @@ class StreamingTranscriber(
     private var trailingSilenceMs = 0
     private var hasSpeech = false
 
+    // 누적 처리 통계(완료 시 RTF 계산용)
+    @Volatile private var totalProcNs = 0L
+    @Volatile private var totalAudioSamples = 0L
+    val processedSec: Float get() = totalProcNs / 1_000_000_000f
+    val audioSec: Float get() = totalAudioSamples.toFloat() / sampleRate
+
     private val consumerJob: Job = scope.launch {
         for (audio in channel) {
             onProcessing(true)
             try {
+                val t0 = System.nanoTime()
                 val text = whisper.transcribeData(audio, language = language).trim()
+                totalProcNs += System.nanoTime() - t0
+                totalAudioSamples += audio.size
                 if (text.isNotEmpty()) onCommitted(text)
             } catch (e: Exception) {
                 Log.e(TAG, "구간 변환 실패", e)

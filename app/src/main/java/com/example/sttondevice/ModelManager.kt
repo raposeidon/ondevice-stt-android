@@ -10,17 +10,17 @@ import java.net.URL
 
 /**
  * Whisper ggml 모델을 내부 저장소로 내려받아 관리한다.
- * 기본: multilingual base 모델(한국어 지원).
+ * 기본: multilingual base 양자화(q5_1) 모델 — base 품질을 유지하면서 더 빠르고 작다.
  */
 class ModelManager(private val context: Context) {
 
     companion object {
         private const val TAG = "ModelManager"
-        const val MODEL_FILE = "ggml-base.bin"
+        const val MODEL_FILE = "ggml-base-q5_1.bin"
         private const val MODEL_URL =
-            "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin"
-        // 다운로드 무결성 최소 검증용 예상 크기(약 147MB). 실제와 약간 달라도 통과되도록 하한만 둠.
-        private const val MIN_VALID_BYTES = 100_000_000L
+            "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base-q5_1.bin"
+        // 다운로드 무결성 최소 검증용 하한(q5_1 base 는 약 57MB).
+        private const val MIN_VALID_BYTES = 40_000_000L
     }
 
     /** 내부 저장소 경로(다운로드 대상). install -r 재설치 시 보존됨. */
