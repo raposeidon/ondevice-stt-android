@@ -1,7 +1,13 @@
 # STTonDevice
 
+> 저장소: `ondevice-stt-android` · 앱 표시명: "STT 온디바이스"
+
 Whisper 기반 **온디바이스(완전 오프라인) 한국어 음성 인식** 안드로이드 앱.
 모든 처리는 기기에서 수행되며, 음성 데이터는 외부로 전송되지 않습니다.
+
+| 메인 | 오픈소스 라이선스 |
+|---|---|
+| <img src="docs/screenshot-main.png" width="260" alt="메인 화면"> | <img src="docs/screenshot-licenses.png" width="260" alt="오픈소스 라이선스 화면"> |
 
 ## 주요 기능
 
@@ -16,7 +22,7 @@ Whisper 기반 **온디바이스(완전 오프라인) 한국어 음성 인식** 
 
 - Android Studio (AGP 8.7.x), JDK 17
 - Android SDK Platform 35, **NDK 27.x**, CMake 3.22.1
-- 대상 ABI: **arm64-v8a** (실기기 권장)
+- 대상 ABI: **arm64-v8a** (실기기 권장). 기본 빌드는 arm64-v8a만 포함하므로 x86_64 에뮬레이터를 쓰려면 `abiFilters`에 ABI 추가 필요
 - minSdk 26 / targetSdk 35
 
 ## Clone
@@ -70,20 +76,25 @@ app/src/main/
     ├── jni.c                       #   whisper + RNNoise JNI
     ├── CMakeLists.txt              #   모델 자동 다운로드 포함
     ├── whisper.cpp/                #   서브모듈 (ggerganov/whisper.cpp)
-    └── rnnoise/                    #   서브모듈 (xiph/rnnoise, 모델은 빌드 시 다운로드)
+    └── rnnoise/                    #   서브모듈 (xiph/rnnoise / 모델은 빌드 시 다운로드)
 ```
 
 ## 처리 흐름
 
+RNNoise 디노이즈(MIC 48k → RNNoise → 16k)는 두 모드 공통 경로입니다.
+
 ```
-[batch]   Recorder(MIC48k→RNNoise→16k) → WhisperContext.transcribeData(ko)
-[stream]  Recorder(16k 프레임) → StreamingTranscriber(VAD) → 순차 transcribeData → 누적 표시
+[공통]    Recorder: MIC 48kHz → RNNoise 디노이즈 → 16kHz
+[batch]   (정제된 16k 누적) → stop → WhisperContext.transcribeData(ko)
+[stream]  (정제된 16k 프레임) → StreamingTranscriber(VAD, 30초 윈도우 정렬) → 순차 transcribeData → 누적 표시
 ```
 
 ## 라이선스
 
-본 저장소의 앱 코드 외에 다음 서드파티 소스를 서브모듈로 참조합니다 (앱 내 "오픈소스 라이선스" 화면에서도 확인 가능):
+- **앱 코드**: MIT License ([LICENSE](LICENSE), © 2026 raposeidon)
+
+서드파티 소스는 서브모듈로 참조하며 각자의 라이선스를 따릅니다 (앱 내 "오픈소스 라이선스" 화면에서도 확인 가능):
 
 - **whisper.cpp** — MIT License
-- **ggml** — MIT License
+- **ggml** (whisper.cpp에 포함) — MIT License
 - **RNNoise** — BSD 3-Clause License (Xiph.Org)
