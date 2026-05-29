@@ -1,0 +1,6 @@
+[submodule "app/src/main/cpp/whisper.cpp"]
+	path = app/src/main/cpp/whisper.cpp
+	url = https://github.com/ggerganov/whisper.cpp.git
+[submodule "app/src/main/cpp/rnnoise"]
+	path = app/src/main/cpp/rnnoise
+	url = https://gitlab.linphone.org/BC/public/external/rnnoise.git

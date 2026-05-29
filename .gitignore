@@ -1,0 +1,28 @@
+# Android / Gradle 빌드 산출물
+.gradle/
+.kotlin/
+build/
+/app/build/
+captures/
+
+# 네이티브 빌드 캐시
+.cxx/
+.externalNativeBuild/
+
+# 기기/머신 종속 설정
+local.properties
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 산출물/모델 (런타임에 확보, 저장소 미포함)
+*.apk
+*.aab
+*.so
+ggml-*.bin
